@@ -4,23 +4,52 @@ from matplotlib.animation import FuncAnimation
 from point import load_points_from_csv, save_points_to_csv
 from time import strftime
 from tqdm import tqdm
+from scipy.interpolate import interp1d, UnivariateSpline
 import matplotlib.animation as animation_module
 
 output_dir = 'output/'
 # read x,y,z coordinates and timestamp from csv file
 trace = load_points_from_csv('Model3D.csv')
-trace = np.stack([x.toXYZT() for x in trace], axis=0)
+trace = np.stack([x.toXYZ() for x in trace], axis=0)
 print(trace.shape)
+# (1438, 3)
+
+def interpolate_trajectory(points, method="linear"):
+    """
+    Fill missing 3D trajectory values based on interpolation.
+    Args:
+        trace (np.ndarray): Input array with shape (n, 3) where columns are [X, Y, Z].
+        method (str): Interpolation method (e.g., 'linear', 'spline', 'polynomial').
+    Returns:
+        np.ndarray: Array with missing values filled.
+    """
+    # Identify missing points
+    missing = np.all(points == 0, axis=1)
+    valid = ~missing
+    
+    valid_indices = np.where(valid)[0]
+    
+    # Create interpolation function
+    if method == "linear":
+        f = interp1d(valid_indices, points[valid], axis=0, kind="linear", fill_value="extrapolate")
+    elif method == "spline":
+        f = UnivariateSpline(valid_indices, points[valid], axis=0, k=2, s=0)
+    
+    # Interpolate missing values
+    trace_interp = f(np.arange(len(points)))
+    points[missing] = trace_interp[missing]
+    return points
 
 def moving_average(data, window_size=5):
     smoothed = np.convolve(data, np.ones(window_size)/window_size, mode='valid')
     return np.concatenate((data[:window_size-1], smoothed))  # Keep length consistent
 
+trace = interpolate_trajectory(trace, method="linear")
 for i in range(3):
     trace[:, i] = moving_average(trace[:, i], window_size=9)
     
 # Calculate velocity and acceleration
-velocity = np.diff(trace[:, :3], axis=0, prepend=np.zeros((1, 3)))
+velocity = np.diff(trace, axis=0, prepend=np.zeros((1, 3)))
 acceleration = np.diff(velocity, axis=0, prepend=np.zeros((1, 3)))
 
 # plot 3D scatter plot animation
