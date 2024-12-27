@@ -14,7 +14,7 @@
 
     <!-- 顯示照片 -->
     <div style="position: relative">
-      <img id="uploadedImg" style="max-width: 600px" />
+      <img id="uploadedImg" style="" />
       <canvas
         id="annotationCanvas"
         style="position: absolute; top: 0; left: 0"
@@ -23,10 +23,41 @@
 
     <!-- Step 2: 相機內參輸入 -->
     <div>
-      <label>fx: <input type="number" id="fx" value="838.2709" /></label>
-      <label>fy: <input type="number" id="fy" value="833.8431" /></label>
-      <label>cx: <input type="number" id="cx" value="1021.8024" /></label>
-      <label>cy: <input type="number" id="cy" value="750.7046" /></label>
+      <label
+        >fx: <input type="number" id="fx" value="838.2709127964056" step="any"
+      /></label>
+      <label
+        >fy: <input type="number" id="fy" value="833.8431415571824" step="any"
+      /></label>
+      <label
+        >cx: <input type="number" id="cx" value="1021.8024823063257" step="any"
+      /></label>
+      <label
+        >cy: <input type="number" id="cy" value="750.7046583633463" step="any"
+      /></label>
+    </div>
+
+    <!-- Step 2-1: 畸變係數 (k1, k2, p1, p2, k3) 輸入 -->
+    <div>
+      <label
+        >k1:
+        <input type="number" id="k1" value="-0.21328747243200033" step="any"
+      /></label>
+      <label
+        >k2: <input type="number" id="k2" value="0.0467554742257117" step="any"
+      /></label>
+      <label
+        >p1:
+        <input type="number" id="p1" value="-0.00019014175815522093" step="any"
+      /></label>
+      <label
+        >p2:
+        <input type="number" id="p2" value="0.0007293213381563766" step="any"
+      /></label>
+      <label
+        >k3:
+        <input type="number" id="k3" value="-0.004791479644180919" step="any"
+      /></label>
     </div>
 
     <!-- Step 3: 計算外參、清除點等功能按鈕 -->
@@ -38,9 +69,9 @@
 
     <script>
       let imagePoints = [];
+      // 以下為羽球場固定 3D 點 (根據實際羽球場尺寸設定)
       let objectPoints = [
-        // 根據羽球場實際尺寸訂定好的 3D 點 (X, Y, Z=0)
-        // 以羽球場正中心為原點 單位為公尺
+        // 以羽球場正中心為原點 (X, Y, Z=0)，單位：公尺
         // 第一條線
         [-3.03, -6.68, 0],
         [0, -6.68, 0],
@@ -82,10 +113,10 @@
         reader.readAsDataURL(file);
       });
 
-      // 2. 等圖片載入後，設定 canvas 尺寸與圖片一致
+      // 2. 圖片載入後，設定 canvas 尺寸 (此處使用原圖大小，避免縮放誤差)
       imgElement.onload = () => {
-        canvas.width = imgElement.width;
-        canvas.height = imgElement.height;
+        canvas.width = imgElement.naturalWidth;
+        canvas.height = imgElement.naturalHeight;
       };
 
       // 3. 點擊畫面 → 紀錄 (u, v) → 在 canvas 上標點
@@ -97,19 +128,33 @@
         // 在 canvas 上畫紅色小點
         ctx.fillStyle = "red";
         ctx.beginPath();
-        ctx.arc(u, v, 2, 0, 2 * Math.PI);
+        ctx.arc(u, v, 3, 0, 2 * Math.PI);
         ctx.fill();
+        console.log(
+          "Click at",
+          u,
+          v,
+          "3D point is",
+          objectPoints[imagePoints.length - 1]
+        );
       });
 
       // 4. 計算外參按鈕
       document.getElementById("solvePnPBtn").addEventListener("click", () => {
-        // 4.1 取得相機內參
+        // 4.1 取得相機內參 (fx, fy, cx, cy)
         let fx = parseFloat(document.getElementById("fx").value);
         let fy = parseFloat(document.getElementById("fy").value);
         let cx = parseFloat(document.getElementById("cx").value);
         let cy = parseFloat(document.getElementById("cy").value);
 
-        // 4.2 建立所需的 Mat
+        // 4.2 取得畸變係數 (k1, k2, p1, p2, k3)
+        let k1 = parseFloat(document.getElementById("k1").value);
+        let k2 = parseFloat(document.getElementById("k2").value);
+        let p1 = parseFloat(document.getElementById("p1").value);
+        let p2 = parseFloat(document.getElementById("p2").value);
+        let k3 = parseFloat(document.getElementById("k3").value);
+
+        // 4.3 建立所需的 Mat
         let objectPointsMat = cv.matFromArray(
           objectPoints.length,
           1,
@@ -133,9 +178,10 @@
           0,
           1,
         ]);
-        let distCoeffs = cv.Mat.zeros(4, 1, cv.CV_32F);
+        // 用 5 個係數存成 Mat
+        let distCoeffs = cv.matFromArray(5, 1, cv.CV_32F, [k1, k2, p1, p2, k3]);
 
-        // 4.3 solvePnP
+        // 4.4 solvePnP
         let rvec = new cv.Mat();
         let tvec = new cv.Mat();
         cv.solvePnP(
@@ -149,18 +195,43 @@
           cv.SOLVEPNP_ITERATIVE
         );
 
-        // 4.4 Rodrigues 轉旋轉矩陣
+        // 4.5 Rodrigues 轉旋轉矩陣
         let R = new cv.Mat();
         cv.Rodrigues(rvec, R);
 
-        // 4.5 組合外參矩陣 [R | t]
+        // 4.6 組合外參矩陣 [R | t]
         let extrinsic = [
           [R.data32F[0], R.data32F[1], R.data32F[2], tvec.data32F[0]],
           [R.data32F[3], R.data32F[4], R.data32F[5], tvec.data32F[1]],
           [R.data32F[6], R.data32F[7], R.data32F[8], tvec.data32F[2]],
         ];
 
-        // 4.6 顯示結果
+        // === 4.7 計算 Reprojection Error ===
+        // (A) 先用 projectPoints 拿到 "重新投影" 的 2D 座標
+        let projectedPointsMat = new cv.Mat();
+        cv.projectPoints(
+          objectPointsMat, // 原始3D點
+          rvec, // 旋轉向量
+          tvec, // 平移向量
+          cameraMatrix, // 相機內參
+          distCoeffs, // 畸變係數
+          projectedPointsMat
+        );
+
+        // (B) projectedPointsMat 裝的 2D 結果 (x1, y1, x2, y2, ...)
+        let totalError = 0;
+        for (let i = 0; i < imagePoints.length; i++) {
+          let px = projectedPointsMat.data32F[2 * i]; // x
+          let py = projectedPointsMat.data32F[2 * i + 1]; // y
+          let dx = px - imagePoints[i][0];
+          let dy = py - imagePoints[i][1];
+          let err = Math.sqrt(dx * dx + dy * dy);
+          totalError += err;
+        }
+        let avgError =
+          imagePoints.length > 0 ? totalError / imagePoints.length : 0;
+
+        // 4.8 顯示結果
         let resultText =
           "Rotation Matrix R:\n" +
           JSON.stringify([
@@ -173,11 +244,22 @@
           JSON.stringify([tvec.data32F[0], tvec.data32F[1], tvec.data32F[2]]) +
           "\n\n" +
           "Extrinsic Matrix [R|t]:\n" +
-          JSON.stringify(extrinsic);
+          JSON.stringify(extrinsic) +
+          "\n\n" +
+          "DistCoeffs:\n" +
+          JSON.stringify([k1, k2, p1, p2, k3]) +
+          "\n\n" +
+          "=== Reprojection Error ===\n" +
+          "Avg Error (pixels): " +
+          avgError.toFixed(4);
 
         document.getElementById("resultArea").textContent = resultText;
 
-        // 4.7 釋放 Mat
+        // 4.9 繪製特定 3D 點
+        drawSpecialPoints(rvec, tvec, cameraMatrix, distCoeffs);
+
+        // 4.10 釋放 Mat
+        projectedPointsMat.delete();
         objectPointsMat.delete();
         imagePointsMat.delete();
         cameraMatrix.delete();
@@ -195,9 +277,73 @@
           imagePoints = [];
           // 清除 canvas 上的標記 (但保留底下的圖片)
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // 若需要同步清除結果區，也可加上：
+          // 如需同步清除計算結果，可加上:
           // document.getElementById("resultArea").textContent = "";
         });
+
+      // 針對「要特別顯示」的 3D 點，例如原點+四角
+      // 這裡以羽球場正中心為 (0,0,0)，並示範四角
+      const specialPoints = [
+        { name: "Origin", coords: [0, 0, 0] },
+        { name: "Corner1", coords: [-3.03, -6.68, 0] }, // 左上角
+        { name: "Corner2", coords: [3.03, -6.68, 0] }, // 右上角
+        { name: "Corner3", coords: [-3.03, 6.68, 0] }, // 左下角
+        { name: "Corner4", coords: [3.03, 6.68, 0] }, // 右下角
+        { name: "Left Net", coords: [-3.03, 0, 1.55] }, // 左邊網柱
+        { name: "Right Net", coords: [3.03, 0, 1.55] }, // 右邊網柱
+      ];
+
+      /**
+       * 根據 rvec, tvec, cameraMatrix, distCoeffs，
+       * 將上面定義的特定 3D 點投影到 2D，並在 canvas 上繪製。
+       */
+      function drawSpecialPoints(rvec, tvec, cameraMatrix, distCoeffs) {
+        // 1. 整理 3D 座標到一個陣列，以便做 projectPoints
+        let coordsFlat = [];
+        for (let sp of specialPoints) {
+          coordsFlat.push(sp.coords[0], sp.coords[1], sp.coords[2]);
+        }
+        // 2. 建立 Mat，大小 = specialPoints.length x 1, type = CV_32FC3
+        let spMat = cv.matFromArray(
+          specialPoints.length,
+          1,
+          cv.CV_32FC3,
+          coordsFlat
+        );
+
+        // 3. 用 projectPoints 將 3D 座標投影到 2D
+        let projectedSpMat = new cv.Mat();
+        cv.projectPoints(
+          spMat,
+          rvec,
+          tvec,
+          cameraMatrix,
+          distCoeffs,
+          projectedSpMat
+        );
+
+        // 4. 讀取 projectPoints 結果，(x, y, x, y, ...)
+        //    並在 canvas 上繪製
+        for (let i = 0; i < specialPoints.length; i++) {
+          let px = projectedSpMat.data32F[2 * i];
+          let py = projectedSpMat.data32F[2 * i + 1];
+
+          // 在 canvas 上畫圈
+          ctx.fillStyle = "blue";
+          ctx.beginPath();
+          ctx.arc(px, py, 5, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // 在圈旁邊寫上標籤
+          ctx.fillStyle = "blue";
+          ctx.font = "16px Arial";
+          ctx.fillText(specialPoints[i].name, px + 8, py);
+        }
+
+        // 5. 記得釋放 Mat
+        spMat.delete();
+        projectedSpMat.delete();
+      }
     </script>
   </body>
 </html>
