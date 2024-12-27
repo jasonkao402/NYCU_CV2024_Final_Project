@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Camera Extrinsic Estimation</title>
+    <!-- 載入最新完整版 OpenCV.js (含 calib3d 模組) -->
+    <script src="https://docs.opencv.org/4.7.0/opencv.js"></script>
+  </head>
+  <body>
+    <h1>羽球場相機外參計算</h1>
+
+    <!-- Step 1: 上傳照片 -->
+    <input type="file" id="inputImage" accept="image/*" />
+
+    <!-- 顯示照片 -->
+    <div style="position: relative">
+      <img id="uploadedImg" style="max-width: 600px" />
+      <canvas
+        id="annotationCanvas"
+        style="position: absolute; top: 0; left: 0"
+      ></canvas>
+    </div>
+
+    <!-- Step 2: 相機內參輸入 -->
+    <div>
+      <label>fx: <input type="number" id="fx" value="838.2709" /></label>
+      <label>fy: <input type="number" id="fy" value="833.8431" /></label>
+      <label>cx: <input type="number" id="cx" value="1021.8024" /></label>
+      <label>cy: <input type="number" id="cy" value="750.7046" /></label>
+    </div>
+
+    <!-- Step 3: 計算外參、清除點等功能按鈕 -->
+    <button id="solvePnPBtn">計算外參</button>
+    <button id="clearPointsBtn">清除所有點</button>
+
+    <!-- 顯示結果 -->
+    <pre id="resultArea"></pre>
+
+    <script>
+      let imagePoints = [];
+      let objectPoints = [
+        // 根據羽球場實際尺寸訂定好的 3D 點 (X, Y, Z=0)
+        // 以羽球場正中心為原點 單位為公尺
+        // 第一條線
+        [-3.03, -6.68, 0],
+        [0, -6.68, 0],
+        [3.03, -6.68, 0],
+        // 第二條線
+        [-3.03, -5.92, 0],
+        [0, -5.92, 0],
+        [3.03, -5.92, 0],
+        // 第三條線
+        [-3.03, -2, 0],
+        [0, -2, 0],
+        [3.03, -2, 0],
+        // 第四條線
+        [-3.03, 2, 0],
+        [0, 2, 0],
+        [3.03, 2, 0],
+        // 第五條線
+        [-3.03, 5.92, 0],
+        [0, 5.92, 0],
+        [3.03, 5.92, 0],
+        // 第六條線
+        [-3.03, 6.68, 0],
+        [0, 6.68, 0],
+        [3.03, 6.68, 0],
+      ];
+
+      const imgElement = document.getElementById("uploadedImg");
+      const canvas = document.getElementById("annotationCanvas");
+      const ctx = canvas.getContext("2d");
+      const inputFile = document.getElementById("inputImage");
+
+      // 1. 上傳檔案 → 讀取 → 顯示在 <img>
+      inputFile.addEventListener("change", (e) => {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+        reader.onload = (evt) => {
+          imgElement.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // 2. 等圖片載入後，設定 canvas 尺寸與圖片一致
+      imgElement.onload = () => {
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+      };
+
+      // 3. 點擊畫面 → 紀錄 (u, v) → 在 canvas 上標點
+      canvas.addEventListener("click", (e) => {
+        let rect = canvas.getBoundingClientRect();
+        let u = e.clientX - rect.left;
+        let v = e.clientY - rect.top;
+        imagePoints.push([u, v]);
+        // 在 canvas 上畫紅色小點
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(u, v, 2, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      // 4. 計算外參按鈕
+      document.getElementById("solvePnPBtn").addEventListener("click", () => {
+        // 4.1 取得相機內參
+        let fx = parseFloat(document.getElementById("fx").value);
+        let fy = parseFloat(document.getElementById("fy").value);
+        let cx = parseFloat(document.getElementById("cx").value);
+        let cy = parseFloat(document.getElementById("cy").value);
+
+        // 4.2 建立所需的 Mat
+        let objectPointsMat = cv.matFromArray(
+          objectPoints.length,
+          1,
+          cv.CV_32FC3,
+          objectPoints.flat()
+        );
+        let imagePointsMat = cv.matFromArray(
+          imagePoints.length,
+          1,
+          cv.CV_32FC2,
+          imagePoints.flat()
+        );
+        let cameraMatrix = cv.matFromArray(3, 3, cv.CV_32F, [
+          fx,
+          0,
+          cx,
+          0,
+          fy,
+          cy,
+          0,
+          0,
+          1,
+        ]);
+        let distCoeffs = cv.Mat.zeros(4, 1, cv.CV_32F);
+
+        // 4.3 solvePnP
+        let rvec = new cv.Mat();
+        let tvec = new cv.Mat();
+        cv.solvePnP(
+          objectPointsMat,
+          imagePointsMat,
+          cameraMatrix,
+          distCoeffs,
+          rvec,
+          tvec,
+          false,
+          cv.SOLVEPNP_ITERATIVE
+        );
+
+        // 4.4 Rodrigues 轉旋轉矩陣
+        let R = new cv.Mat();
+        cv.Rodrigues(rvec, R);
+
+        // 4.5 組合外參矩陣 [R | t]
+        let extrinsic = [
+          [R.data32F[0], R.data32F[1], R.data32F[2], tvec.data32F[0]],
+          [R.data32F[3], R.data32F[4], R.data32F[5], tvec.data32F[1]],
+          [R.data32F[6], R.data32F[7], R.data32F[8], tvec.data32F[2]],
+        ];
+
+        // 4.6 顯示結果
+        let resultText =
+          "Rotation Matrix R:\n" +
+          JSON.stringify([
+            [R.data32F[0], R.data32F[1], R.data32F[2]],
+            [R.data32F[3], R.data32F[4], R.data32F[5]],
+            [R.data32F[6], R.data32F[7], R.data32F[8]],
+          ]) +
+          "\n\n" +
+          "Translation Vector t:\n" +
+          JSON.stringify([tvec.data32F[0], tvec.data32F[1], tvec.data32F[2]]) +
+          "\n\n" +
+          "Extrinsic Matrix [R|t]:\n" +
+          JSON.stringify(extrinsic);
+
+        document.getElementById("resultArea").textContent = resultText;
+
+        // 4.7 釋放 Mat
+        objectPointsMat.delete();
+        imagePointsMat.delete();
+        cameraMatrix.delete();
+        distCoeffs.delete();
+        rvec.delete();
+        tvec.delete();
+        R.delete();
+      });
+
+      // 5. 新增「清除所有點」按鈕功能
+      document
+        .getElementById("clearPointsBtn")
+        .addEventListener("click", () => {
+          // 清除陣列中的所有點
+          imagePoints = [];
+          // 清除 canvas 上的標記 (但保留底下的圖片)
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // 若需要同步清除結果區，也可加上：
+          // document.getElementById("resultArea").textContent = "";
+        });
+    </script>
+  </body>
+</html>
