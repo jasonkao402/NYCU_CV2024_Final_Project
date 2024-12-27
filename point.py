@@ -1,8 +1,6 @@
 """
 Object: for each point of trajectory
 """
-import json
-import logging
 import numpy as np
 import pandas as pd
 
@@ -18,20 +16,6 @@ class Point():
         self.speed = float(speed)
         self.color = color
         self.cam_idx = -1
-
-    def build_string(self):
-        payload = {"id": self.fid, "timestamp": self.timestamp, "visibility": self.visibility,
-            "pos": {"x":self.x, "y":self.y, "z":self.z}, "event": self.event, "speed": self.speed, "color": self.color}
-        return json.dumps(payload)
-
-    def setX(self, x):
-        self.x = float(x)
-
-    def setY(self, y):
-        self.y = float(y)
-
-    def setZ(self, z):
-        self.z = float(z)
 
     def __str__(self):
         s = (f"\nPoint Fid: {self.fid}\n"
@@ -58,24 +42,6 @@ class Point():
     def __lt__(self, other):
         # sorted by timestamp
         return self.timestamp < other.timestamp
-
-def sendPoints(client, topic, points):
-    if isinstance(points, Point):
-        logging.debug(f"[{topic}] fid: {points.fid}, ({points.x:.2f}, {points.y:.2f}, {points.z:.2f}) t:{points.timestamp:.3f}")
-        json_str = '{"linear":[' + points.build_string() + ']}'
-        client.publish(topic, json_str)
-    elif isinstance(points, list):
-        fids = []
-        json_str = '{"linear":['
-        for idx, p in enumerate(points):
-            fids.append(p.fid)
-            json_str += p.build_string()
-            if idx < len(points)-1:
-                json_str += ','
-        json_str += ']}'
-        client.publish(topic, json_str)
-    else:
-        logging.warning("Unknown argument type in sendPoint function.")
 
 def load_points_from_csv(csv_file) -> list:
     # return list of Points

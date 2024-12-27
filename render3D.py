@@ -9,7 +9,7 @@ import matplotlib.animation as animation_module
 
 output_dir = 'output/'
 # read x,y,z coordinates and timestamp from csv file
-trace = load_points_from_csv('Model3D.csv')
+trace = load_points_from_csv('data/2024-09-19_11-46-04/Model3D.csv')
 trace = np.stack([x.toXYZ() for x in trace], axis=0)
 print(trace.shape)
 # (1438, 3)

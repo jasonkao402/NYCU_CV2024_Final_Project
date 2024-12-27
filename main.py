@@ -16,29 +16,14 @@ import cv2
 import numpy as np
 import configparser
 import pandas as pd
-# import paho.mqtt.client as mqtt
-# from pyrender import Camera
 
-DIRNAME = os.path.dirname(os.path.abspath(__file__))
-ROOTDIR = os.path.dirname(DIRNAME)
 
-sys.path.insert(0, ROOTDIR)
-sys.path.insert(0, os.path.join(ROOTDIR, 'LayerContent'))
-# from LayerContent.smooth import removeOuterPoint, detectEvent, smoothByEvent, detectBallTypeByEvent
-# from LayerContent.BallInfo import getBallInfo, writeBallInfo
-# from LayerContent.SmashBallInfo import runSmashAnalyze, writeSmashBallInfo
-# from LayerContent.smooth_gradient_minimize import smoothByEvent_gradient_minimize
-
-sys.path.insert(0, ROOTDIR)
-sys.path.insert(0, os.path.join(ROOTDIR, 'lib'))
-
-# from lib.common import  loadConfig, loadNodeConfig
-# from lib.inspector import sendNodeStateMsg
 from point import Point, load_points_from_csv, save_points_to_csv
-from writer import CSVWriter
 
 from MultiCamTriang import MultiCamTriang
-# from LayerContent.Model3D.EventDetector import isHit, isLand, isServe
+
+
+os.path.abspath(__file__)
 
 def loadConfig(cfg_file):
     try:
@@ -51,38 +36,10 @@ def loadConfig(cfg_file):
         sys.exit()
     return config
 
-def load_points_from_csv(csv_file) -> list:
-    # return list of Points
-    # if you want to get ndarray of (N,4), just do np.stack([x.toXYZT() for x in list], axis=0)
-    ret = []
-    df = pd.read_csv(csv_file)
 
-    for index, row in df.iterrows():
-        point = Point(fid=row['Frame'], timestamp=row['Timestamp'], visibility=row['Visibility'],
-                        x=row['X'], y=row['Y'], z=row['Z'],
-                        event=row['Event'])
-        ret.append(point)
-
-    return ret
-
-
-
-def triangluation(config='config', output_csv=None, atleast1hit=False):
+def triangluation():
     global fps
 
-    if output_csv is None: # Default: Model3D.csv
-        output_csv = os.path.join(os.path.dirname(config), 'Model3D.csv')
-
-    # config_folder = 'config'
-    # configs = []
-    
-    # for file in os.listdir(config_folder):
-    #     if file.endswith('.cfg'):
-    #         print(file)
-    #         config = loadConfig(os.path.join(config_folder, file))
-    #         configs.append(config)
-
-    # shape : (num_cam, mtx...)
     ks = []
     poses = []          # Only Used by Shao-Ping Method
     eye = []            # Only Used by Shao-Ping Method
@@ -95,43 +52,23 @@ def triangluation(config='config', output_csv=None, atleast1hit=False):
 
     cam_idx = 0
 
-    cameras = []
-    video_csv = {} # {'CameraReaderL': 'TrackNetL', 'CameraReaderR': 'TrackNetR'}
-    # for node_name, node_info in config.items():
-    #     # Find All Cameras
-    #     if 'node_type' in node_info and node_info['node_type'] == 'Reader':
-    #         cameras.append(node_name)
-    # for node_name, node_info in config.items():
-    #     if 'file_name' in node_info and node_info['file_name'] in cameras:
-    #         video_csv[node_info['file_name']] = node_name
+    for i, folder in enumerate(os.listdir(data_folder)):
+        print(f'{i:3d}: {folder}')
+    num = int(input('Please select the rally folder: '))
+    rally_folder = os.path.join(data_folder, os.listdir(data_folder)[num])
 
-    folder = 'data/2024-09-19_11-46-04'
-    cameras = ['CameraReader_1', 'CameraReader_2']
 
     # get fps from the config of camera
     fps = 1e9
     for c in cameras:
         mp4 = c + '.mp4'
-        if os.path.exists(os.path.join(folder, mp4.split('.')[0]+'_ball.csv')): # Labeled
-            points_2d = load_points_from_csv(os.path.join(folder,mp4.split('.')[0]+'_ball.csv'))
-        elif c in video_csv.keys() and os.path.exists(os.path.join(folder, video_csv[c]+'.csv')): # TrackNet
-            points_2d = load_points_from_csv(os.path.join(folder, video_csv[c]+'.csv'))
-        else:
-            print(f'{mp4} No Labeled/TrackNet Data')
-            continue
-            # return False
+        points_2d = load_points_from_csv(os.path.join(rally_folder ,mp4.split('.')[0]+'_ball.csv'))
 
-        camera_config_path = os.path.join(folder,mp4.split('.')[0].split('_')[1]+'.cfg')
-
-        # check if config exists in replay directory
-        if not os.path.isfile(camera_config_path):
-            print(f'{camera_config_path} not found')
-            continue
+        camera_config_path = os.path.join(camera_config_folder, c +'.cfg')
 
         camera_config = loadConfig(camera_config_path)
 
         fps = min(fps, float(camera_config['Camera']['fps']))
-        print(fps)
 
         ks.append(np.array(json.loads(camera_config['Other']['ks']),np.float32))
         poses.append(np.array(json.loads(camera_config['Other']['poses']),np.float32))
@@ -157,7 +94,7 @@ def triangluation(config='config', output_csv=None, atleast1hit=False):
     # Sort by Timestamp
     all_points_2d.sort()
 
-    csv3DWriter = CSVWriter(name="", filename=output_csv)
+    # csv3DWriter = CSVWriter(name="", filename=output_csv)
 
     multiCamTriang = MultiCamTriang(poses, eye, newcameramtx)
 
@@ -253,7 +190,7 @@ def triangluation(config='config', output_csv=None, atleast1hit=False):
             multiCamTriang.setTrack2Ds(undistort_points_2D)
             # print(projection_mat[cam_detected_ball])
             multiCamTriang.setProjectionMats(projection_mat[cam_detected_ball])
-            track_3D = multiCamTriang.rain_calculate3D() # shape:(num_frame,3), num_frame=1
+            track_3D = multiCamTriang.calculate3D() # shape:(num_frame,3), num_frame=1
 
             # Use Timestamp to triangulation, so fid is not correct [*]
             point3d = Point(fid=point3d_fid,
@@ -271,66 +208,16 @@ def triangluation(config='config', output_csv=None, atleast1hit=False):
         for index in sorted(idx_pop_all_points_2d, reverse=True):
             del all_points_2d[index]
 
-    # Write result into csv
-    output_points.sort()
-    for p in output_points:
-        csv3DWriter.writePoints(p)
-    csv3DWriter.close()
-    print(f"Output {output_csv}")
-
-    # # Old Event Detector
-    # points = load_points_from_csv(output_csv)
-    # GROUND_HEIGHT = 0.1
-    # SERVE_HEIGHT = 0.5 # Serving height should higher than this value
-    # hit = False
-    # for i in range(len(points)):
-    #     if i+4 < len(points):
-    #         if(isHit(points[i],points[i+1],points[i+2],points[i+3],points[i+4],GROUND_HEIGHT)):
-    #             hit = True
-    #     elif i+2 < len(points):
-    #         isLand(points[i],points[i+1],points[i+2],GROUND_HEIGHT)
-    #         isServe(points[i],points[i+1],points[i+2],GROUND_HEIGHT,SERVE_HEIGHT)
-    # # Find one hit if not hit detected
-    # if (not hit) and atleast1hit:
-    #     # Use first half of points
-    #     t = [p.timestamp for p in points]
-    #     y = [p.y for p in points]
-    #     coeffs = np.polyfit(t[:len(points)//2], y[:len(points)//2], 1)
-    #     slope = coeffs[-2]
-    #     if slope >= 0:
-    #         points[np.argmax(y)].event = 1
-    #     else:
-    #         points[np.argmin(y)].event = 1
-    # save_points_to_csv(points=points, csv_file=output_csv)
+    output_csv = os.path.join(rally_folder, 'Model3D.csv')
+    save_points_to_csv(points=output_points, csv_file=output_csv)
+    print(f'Output: {output_csv}') 
 
     return True
 
-def parse_args() -> Optional[str]:
-    # Args
-    parser = argparse.ArgumentParser(description = 'Model3D Offline Version (2022/05/06)')
-    parser.add_argument('--config', type=str, required=True, help = 'config name')
-    parser.add_argument('--output_csv', type=str, default=None, help = 'output 3D csv path')
-    parser.add_argument('--atleast1hit', action="store_true", help = 'find at least one hit event')
-    parser.add_argument('--CES', action="store_true", help = 'for CES demo')
-    args = parser.parse_args()
-
-    return args
-
-def main():
-    # Parse arguments
-    # args = parse_args()
-    triangluation()
-    # date = os.path.dirname(args.config)
-    # removeOuterPoint(date) # Output：mod
-    # detectEvent(date) # Output：event_1    
-
-    # smoothByEvent(date)
-    # ball_type = detectBallTypeByEvent(date)
-    # ball_info = getBallInfo(date)
-    # ball_info_file = 'Model3D_info_.csv'
-    # ball_info_path = os.path.join(date, ball_info_file)
-    # writeBallInfo(ball_info_path, ball_info, ball_type)
-
 
 if __name__ == '__main__':
-    main()
+    cameras = ['CameraReader_1', 'CameraReader_2']
+    camera_config_folder = 'config'
+    data_folder = 'data'
+    triangluation()
+
