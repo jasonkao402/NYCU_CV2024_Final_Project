@@ -1,3 +1,5 @@
+import os
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -7,9 +9,14 @@ from tqdm import tqdm
 from scipy.interpolate import interp1d, UnivariateSpline
 import matplotlib.animation as animation_module
 
-output_dir = 'output/'
-# read x,y,z coordinates and timestamp from csv file
-trace = load_points_from_csv('data/2024-09-19_11-46-04/Model3D.csv')
+# Argument parser to choose CSV file and output directory
+parser = argparse.ArgumentParser(description="3D Trajectory Visualization")
+parser.add_argument("--csv", type=str, required=True, help="Path to the input CSV file")
+parser.add_argument("--output_dir", type=str, default="output/", help="Directory to save the output video")
+args = parser.parse_args()
+
+output_dir = args.output_dir
+trace = load_points_from_csv(args.csv)
 trace = np.stack([x.toXYZ() for x in trace], axis=0)
 print(trace.shape)
 # (1438, 3)
@@ -58,7 +65,6 @@ interval = 1000 / FPS
 TRAIL = 30  # Number of past frames to show
 fig = plt.figure(figsize=(8, 8))
 ax1 = fig.add_subplot(111, projection='3d')
-# ax2 = fig.add_subplot(212)
 axis_min = np.min(trace, axis=0)
 axis_max = np.max(trace, axis=0)
 print(axis_min, axis_max, sep='\n')
@@ -115,11 +121,9 @@ def save_animation_to_video(animation, filename):
         animation.save(filename, writer=writer, progress_callback=lambda i, n: pbar.update(1))
 
 start_frame = 310
-# end_frame = min(1100, trace.shape[0])
 end_frame = trace.shape[0]
 ani = FuncAnimation(fig, update, frames=range(start_frame, end_frame), repeat=False, interval=interval)
-# plt.show()
 
 # Save the animation to a video file
 timestamp = strftime('%Y_%m%d_%H%M')
-save_animation_to_video(ani, f'{output_dir}trace_{timestamp}_test.mp4')
+save_animation_to_video(ani, os.path.join(output_dir, f'3D_trajectory.mp4'))
