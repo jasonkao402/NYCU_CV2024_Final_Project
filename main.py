@@ -3,10 +3,6 @@ import json
 import logging
 import os
 import sys
-
-from datetime import datetime
-from typing import Optional
-
 import cv2
 import numpy as np
 import configparser
@@ -28,15 +24,18 @@ def loadConfig(cfg_file):
 
 def triangluation(data_folder, output_dir):
     ks = []
-    poses = []          # Only Used by Shao-Ping Method
-    eye = []            # Only Used by Shao-Ping Method
-    dist = []           # Our Method
-    newcameramtx = []   # Our Method
-    projection_mat = [] # Our Method
+    poses = []     
+    eye = []
+    dist = []
+    newcameramtx = []
+    projection_mat = []
 
     all_points_2d = []
 
     cam_idx = 0
+
+    cameras = [f.split('.')[0] for f in os.listdir(data_folder) if f.endswith('.cfg')]
+    print(cameras)
 
     fps = 1e9
     for c in cameras:
@@ -165,9 +164,7 @@ def triangluation(data_folder, output_dir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Triangulate 3D points from 2D data.")
     parser.add_argument('--data_folder', required=True, help="Path to the data folder.")
-    parser.add_argument('--camera_config_folder', default='config', help="Path to the camera configuration folder.")
     parser.add_argument('--output_dir', default='output', help="Path to the output directory.")
     args = parser.parse_args()
 
-    cameras = ['CameraReader_1', 'CameraReader_2']
     triangluation(data_folder=args.data_folder, output_dir=args.output_dir)
