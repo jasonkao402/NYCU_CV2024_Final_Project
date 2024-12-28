@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>羽球3D軌跡模擬影片生成</title>
+    <title>
+      Generate Badminton 3D Trajectory Simulation Video 羽球3D軌跡模擬影片生成
+    </title>
     <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -66,7 +68,9 @@
     <!-- 導航欄 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">羽球3D軌跡模擬</a>
+        <a class="navbar-brand" href="#"
+          >Badminton 3D Trajectory Simulation 羽球3D軌跡模擬</a
+        >
         <button
           class="navbar-toggler"
           type="button"
@@ -74,17 +78,21 @@
           data-bs-target="#navbarNav"
           aria-controls="navbarNav"
           aria-expanded="false"
-          aria-label="切換導航"
+          aria-label="Toggle navigation 切換導航"
         >
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/">首頁</a>
+              <a class="nav-link active" aria-current="page" href="/"
+                >Home 首頁</a
+              >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/extrinsic">外參計算</a>
+              <a class="nav-link" href="/extrinsic"
+                >Extrinsic Calculation 外參計算</a
+              >
             </li>
           </ul>
         </div>
@@ -93,17 +101,21 @@
 
     <!-- 主容器 -->
     <div class="container my-5">
-      <h1 class="text-center mb-4">生成羽球3D軌跡模擬</h1>
+      <h1 class="text-center mb-4">
+        Generate Badminton 3D Trajectory Simulation 羽球3D軌跡模擬
+      </h1>
 
       <!-- 上傳表單區塊 -->
       <div class="card mb-4">
         <div class="card-header">
-          <strong>步驟 1: 上傳資料夾</strong>
+          <strong>Step 1: Upload Folder 步驟 1: 上傳資料夾</strong>
         </div>
         <div class="card-body">
           <form id="uploadForm">
             <div class="mb-3">
-              <label for="folderInput" class="form-label">選擇資料夾</label>
+              <label for="folderInput" class="form-label"
+                >Select Folder 選擇資料夾</label
+              >
               <input
                 id="folderInput"
                 type="file"
@@ -114,7 +126,9 @@
                 class="form-control"
               />
             </div>
-            <button type="submit" class="btn btn-primary">上傳並處理</button>
+            <button type="submit" class="btn btn-primary">
+              Upload and Process 上傳並處理
+            </button>
           </form>
         </div>
       </div>
@@ -122,11 +136,11 @@
       <!-- 影片預覽區塊 -->
       <div class="card mb-4">
         <div class="card-header">
-          <strong>影片預覽</strong>
+          <strong>Video Preview 影片預覽</strong>
         </div>
         <div class="card-body">
           <div id="videoContainer">
-            <p class="text-muted">尚未選擇任何檔案。</p>
+            <p class="text-muted">No files selected. 尚未選擇任何檔案。</p>
           </div>
         </div>
       </div>
@@ -134,11 +148,13 @@
       <!-- 處理後的影片區塊 -->
       <div class="card mb-4">
         <div class="card-header">
-          <strong>處理後的影片</strong>
+          <strong>Processed Videos 處理後的影片</strong>
         </div>
         <div class="card-body">
           <div id="processedVideoContainer" class="video-container">
-            <p class="text-muted">尚未處理任何影片。</p>
+            <p class="text-muted">
+              No videos processed yet. 尚未處理任何影片。
+            </p>
           </div>
         </div>
       </div>
@@ -148,9 +164,9 @@
     <div id="loadingOverlay" class="d-none">
       <div>
         <div class="spinner-border text-light" role="status">
-          <span class="visually-hidden">載入中...</span>
+          <span class="visually-hidden">Loading... 載入中...</span>
         </div>
-        <p class="mt-3">處理中，請稍候...</p>
+        <p class="mt-3">Processing, please wait... 處理中，請稍候...</p>
       </div>
     </div>
 
@@ -168,7 +184,7 @@
       const loadingOverlay = document.getElementById("loadingOverlay");
 
       /**
-       * 顯示載入覆蓋層
+       * 顯示載入覆蓋層 / Show loading overlay
        */
       function showLoadingOverlay() {
         loadingOverlay.classList.remove("d-none");
@@ -176,23 +192,23 @@
       }
 
       /**
-       * 隱藏載入覆蓋層
+       * 隱藏載入覆蓋層 / Hide loading overlay
        */
       function hideLoadingOverlay() {
         loadingOverlay.classList.add("d-none");
         loadingOverlay.classList.remove("d-flex");
       }
 
-      // 當選擇資料夾時，顯示影片預覽
+      // 當選擇資料夾時，顯示影片預覽 / When a folder is selected, display video preview
       folderInput.addEventListener("change", (event) => {
         const videoFiles = Array.from(event.target.files).filter((file) =>
           file.type.startsWith("video/")
         );
 
-        videoContainer.innerHTML = "<h5>影片預覽</h5>";
+        videoContainer.innerHTML = "<h5>Video Preview 影片預覽</h5>";
         if (videoFiles.length === 0) {
           videoContainer.innerHTML +=
-            '<p class="text-muted">未找到任何影片檔案。</p>';
+            '<p class="text-muted">No video files found. 未找到任何影片檔案。</p>';
         } else {
           const row = document.createElement("div");
           row.className = "row";
@@ -227,17 +243,17 @@
         }
       });
 
-      // 當提交表單時，上傳並處理資料夾
+      // 當提交表單時，上傳並處理資料夾 / On form submission, upload and process the folder
       uploadForm.addEventListener("submit", async (event) => {
-        event.preventDefault(); // 阻止表單提交後重新加載頁面
+        event.preventDefault(); // 阻止表單提交後重新加載頁面 / Prevent page reload after form submission
 
-        // 檢查是否有選擇檔案
+        // 檢查是否有選擇檔案 / Check if any files are selected
         if (folderInput.files.length === 0) {
-          alert("請選擇要上傳的資料夾。");
+          alert("Please select a folder to upload. 請選擇要上傳的資料夾。");
           return;
         }
 
-        // 顯示處理中的提示和背景遮罩
+        // 顯示處理中的提示和背景遮罩 / Show processing indicator and overlay
         showLoadingOverlay();
 
         const formData = new FormData();
@@ -246,15 +262,15 @@
         );
 
         try {
-          // 提交表單並等待伺服器處理
+          // 提交表單並等待伺服器處理 / Submit the form and wait for server processing
           const response = await fetch("/upload", {
             method: "POST",
             body: formData,
           });
 
           if (response.ok) {
-            const videoUrl = await response.text(); // 伺服器返回影片路徑
-            processedVideoContainer.innerHTML = ""; // 清空之前的內容
+            const videoUrl = await response.text(); // 伺服器返回影片路徑 / Server returns video URL
+            processedVideoContainer.innerHTML = ""; // 清空之前的內容 / Clear previous content
 
             const col = document.createElement("div");
             col.className = "col-12 col-sm-6 col-lg-4 mb-3";
@@ -272,7 +288,8 @@
 
             const cardTitle = document.createElement("h5");
             cardTitle.className = "card-title";
-            cardTitle.textContent = "3D軌跡模擬影片";
+            cardTitle.textContent =
+              "3D Trajectory Simulation Video 3D軌跡模擬影片";
 
             cardBody.appendChild(cardTitle);
             card.appendChild(videoElement);
@@ -280,12 +297,12 @@
             col.appendChild(card);
             processedVideoContainer.appendChild(col);
           } else {
-            alert("處理過程中發生錯誤。");
+            alert("An error occurred during processing. 處理過程中發生錯誤。");
           }
         } catch (error) {
-          alert("發生未預期的錯誤。");
+          alert("An unexpected error occurred. 發生未預期的錯誤。");
         } finally {
-          // 隱藏處理中的提示和背景遮罩
+          // 隱藏處理中的提示和背景遮罩 / Hide processing indicator and overlay
           hideLoadingOverlay();
         }
       });
