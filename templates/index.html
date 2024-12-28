@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/icon.ico" />
     <title>
       Badminton 3D Trajectory Simulation Video 羽球3D軌跡模擬影片生成
     </title>
@@ -220,7 +221,7 @@
           file.type.startsWith("video/")
         );
 
-        videoContainer.innerHTML = "<h5>Video Preview 影片預覽</h5>";
+        videoContainer.innerHTML = "";
         if (videoFiles.length === 0) {
           videoContainer.innerHTML +=
             '<p class="text-muted">No video files found. 未找到任何影片檔案。</p>';
