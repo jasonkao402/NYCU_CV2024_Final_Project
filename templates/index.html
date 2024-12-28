@@ -113,9 +113,7 @@
         <div class="card-body">
           <form id="uploadForm">
             <div class="mb-3">
-              <label for="folderInput" class="form-label"
-                >Select Folder 選擇資料夾</label
-              >
+              <label for="folderInput" class="form-label">Select Folder 選擇資料夾</label>
               <input
                 id="folderInput"
                 type="file"
@@ -126,12 +124,16 @@
                 class="form-control"
               />
             </div>
+            <div id="folderName" class="mb-3 text-muted">
+              No folder selected. 尚未選擇資料夾。
+            </div>
             <button type="submit" class="btn btn-primary">
               Upload and Process 上傳並處理
             </button>
           </form>
         </div>
       </div>
+
 
       <!-- 影片預覽區塊 -->
       <div class="card mb-4">
@@ -200,7 +202,19 @@
       }
 
       // 當選擇資料夾時，顯示影片預覽 / When a folder is selected, display video preview
+      // 顯示所選資料夾的名稱 / Display the selected folder name
       folderInput.addEventListener("change", (event) => {
+        const folderName = document.getElementById("folderName");
+        if (folderInput.files.length > 0) {
+          // 使用第一個檔案的路徑來推測資料夾名稱
+          const firstFilePath = folderInput.files[0].webkitRelativePath;
+          const folderPath = firstFilePath.split("/")[0];
+          folderName.textContent = `Selected Folder: ${folderPath}`;
+        } else {
+          folderName.textContent = "No folder selected. 尚未選擇資料夾。";
+        }
+
+        // 更新影片預覽區塊
         const videoFiles = Array.from(event.target.files).filter((file) =>
           file.type.startsWith("video/")
         );
@@ -242,6 +256,7 @@
           videoContainer.appendChild(row);
         }
       });
+
 
       // 當提交表單時，上傳並處理資料夾 / On form submission, upload and process the folder
       uploadForm.addEventListener("submit", async (event) => {
