@@ -41,7 +41,7 @@ def triangluation(data_folder, camera_config_folder, output_dir):
     fps = 1e9
     for c in cameras:
         mp4 = c + '.mp4'
-        points_2d = load_points_from_csv(os.path.join(data_folder, mp4.split('.')[0] + '_ball.csv'))
+        points_2d = load_points_from_csv(os.path.join(data_folder, mp4.split('.')[0] + '.csv'))
 
         camera_config_path = os.path.join(camera_config_folder, c + '.cfg')
         camera_config = loadConfig(camera_config_path)

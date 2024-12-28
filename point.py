@@ -1,6 +1,3 @@
-"""
-Object: for each point of trajectory
-"""
 import numpy as np
 import pandas as pd
 

@@ -1,8 +1,5 @@
 import numpy as np
 import cv2
-import os, argparse
-import logging
-from math import sqrt, pi, sin, cos, tan
 
 class MultiCamTriang(object):
     """docstring for MultiCamTriang"""
