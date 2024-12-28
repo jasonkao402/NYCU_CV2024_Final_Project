@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>羽球場相機外參計算</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* 自訂樣式 */
+      body {
+        background-color: #f8f9fa;
+      }
+      .canvas-container {
+        position: relative;
+        display: inline-block; /* 確保容器根據內容大小自動調整 */
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        overflow: auto; /* 添加滾動條 */
+        background-color: #fff;
+        padding: 10px;
+      }
+      #uploadedImg {
+        display: block; /* 移除行內元素間的空隙 */
+        border-radius: 5px;
+      }
+      #annotationCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: crosshair;
+      }
+      .section-title {
+        margin-top: 30px;
+        margin-bottom: 20px;
+      }
+      .result-area {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap; /* 允許換行 */
+      }
+      /* 調整表格內文字對齊 */
+      .matrix-table td,
+      .matrix-table th {
+        text-align: center;
+        vertical-align: middle;
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 導航欄 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">羽球場相機外參計算</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="切換導航"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/">首頁</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/extrinsic">外參計算</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container my-5">
+      <h1 class="text-center mb-4">羽球場相機外參計算</h1>
+
+      <!-- 上傳照片區塊 -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>步驟 1: 上傳照片</strong>
+        </div>
+        <div class="card-body">
+          <input
+            type="file"
+            id="inputImage"
+            accept="image/*"
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      <!-- 顯示照片與 Canvas 疊加 -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>步驟 1-2: 標記點位</strong>
+        </div>
+        <div class="card-body canvas-container">
+          <img id="uploadedImg" alt="上傳的圖片" />
+          <canvas id="annotationCanvas"></canvas>
+        </div>
+        <div class="card-footer text-muted">點擊圖片以標記2D點位</div>
+      </div>
+
+      <!-- 相機內參輸入 -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>步驟 2: 相機內參輸入</strong>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label for="fx" class="form-label">fx</label>
+              <input
+                type="number"
+                id="fx"
+                value="838.2709127964056"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-3">
+              <label for="fy" class="form-label">fy</label>
+              <input
+                type="number"
+                id="fy"
+                value="833.8431415571824"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-3">
+              <label for="cx" class="form-label">cx</label>
+              <input
+                type="number"
+                id="cx"
+                value="1021.8024823063257"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-3">
+              <label for="cy" class="form-label">cy</label>
+              <input
+                type="number"
+                id="cy"
+                value="750.7046583633463"
+                step="any"
+                class="form-control"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 畸變係數輸入 -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>步驟 2-1: 畸變係數輸入</strong>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label for="k1" class="form-label">k1</label>
+              <input
+                type="number"
+                id="k1"
+                value="-0.21328747243200033"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-2">
+              <label for="k2" class="form-label">k2</label>
+              <input
+                type="number"
+                id="k2"
+                value="0.0467554742257117"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-2">
+              <label for="p1" class="form-label">p1</label>
+              <input
+                type="number"
+                id="p1"
+                value="-0.00019014175815522093"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-2">
+              <label for="p2" class="form-label">p2</label>
+              <input
+                type="number"
+                id="p2"
+                value="0.0007293213381563766"
+                step="any"
+                class="form-control"
+              />
+            </div>
+            <div class="col-md-2">
+              <label for="k3" class="form-label">k3</label>
+              <input
+                type="number"
+                id="k3"
+                value="-0.004791479644180919"
+                step="any"
+                class="form-control"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 功能按鈕區塊 -->
+      <div class="d-flex justify-content-center mb-4">
+        <button id="solveExtrinsicBtn" class="btn btn-primary me-3">
+          計算外參
+        </button>
+        <button id="clearPointsBtn" class="btn btn-danger">清除所有點</button>
+      </div>
+
+      <!-- 顯示結果區塊 -->
+      <div class="card">
+        <div class="card-header">
+          <strong>結果顯示</strong>
+        </div>
+        <div class="card-body">
+          <div id="resultArea" class="result-area"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS 和依賴 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 原有的 JavaScript -->
+    <script>
+      // === A. 羽球場 3D點 (範例) ===
+      let objectPoints = [
+        // 第一條線
+        [-3.03, -6.68, 0],
+        [0, -6.68, 0],
+        [3.03, -6.68, 0],
+        // 第二條線
+        [-3.03, -5.92, 0],
+        [0, -5.92, 0],
+        [3.03, -5.92, 0],
+        // 第三條線
+        [-3.03, -2, 0],
+        [0, -2, 0],
+        [3.03, -2, 0],
+        // 第四條線
+        [-3.03, 2, 0],
+        [0, 2, 0],
+        [3.03, 2, 0],
+        // 第五條線
+        [-3.03, 5.92, 0],
+        [0, 5.92, 0],
+        [3.03, 5.92, 0],
+        // 第六條線
+        [-3.03, 6.68, 0],
+        [0, 6.68, 0],
+        [3.03, 6.68, 0],
+      ];
+
+      // === B. 使用者在畫面上標記的2D點 ===
+      let imagePoints = [];
+
+      // 參考 HTML tag
+      const imgElement = document.getElementById("uploadedImg");
+      const canvas = document.getElementById("annotationCanvas");
+      const ctx = canvas.getContext("2d");
+      const inputFile = document.getElementById("inputImage");
+      const resultArea = document.getElementById("resultArea");
+
+      // 1. 上傳檔案並顯示在 <img>
+      inputFile.addEventListener("change", (e) => {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+        reader.onload = (evt) => {
+          imgElement.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // 2. 圖片載入後，設定 canvas 與圖片一致
+      imgElement.onload = () => {
+        // 設定 canvas 大小與圖片自然尺寸相同
+        canvas.width = imgElement.naturalWidth;
+        canvas.height = imgElement.naturalHeight;
+        // 設定圖片顯示為自然尺寸
+        imgElement.style.width = imgElement.naturalWidth + "px";
+        imgElement.style.height = imgElement.naturalHeight + "px";
+        // 清除畫布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 若有特殊點，重新繪製
+        if (resultArea.innerHTML) {
+          // 此處可添加重新繪製特殊點的邏輯
+        }
+      };
+
+      // 3. 點擊 Canvas → 紀錄 (u, v)
+      canvas.addEventListener("click", (e) => {
+        let rect = canvas.getBoundingClientRect();
+        let u = e.clientX - rect.left;
+        let v = e.clientY - rect.top;
+        imagePoints.push([u, v]);
+
+        // 在 canvas 上畫紅色點
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(u, v, 5, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      // 4. 清除所有點
+      document
+        .getElementById("clearPointsBtn")
+        .addEventListener("click", () => {
+          imagePoints = [];
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          resultArea.innerHTML = "";
+        });
+
+      // === C. 特別要投影的 3D 點 (原點與四個角) ===
+      const specialPoints = [
+        { name: "Origin", coords: [0, 0, 0] },
+        { name: "Corner1", coords: [-3.03, -6.68, 0] }, // 左上角
+        { name: "Corner2", coords: [3.03, -6.68, 0] }, // 右上角
+        { name: "Corner3", coords: [-3.03, 6.68, 0] }, // 左下角
+        { name: "Corner4", coords: [3.03, 6.68, 0] }, // 右下角
+        { name: "Left Net", coords: [-3.03, 0, 1.55] }, // 左邊網柱
+        { name: "Right Net", coords: [3.03, 0, 1.55] }, // 右邊網柱
+      ];
+
+      // === D. 幫助函式：用「外參 3x4 + 內參 + 畸變」將 3D 點投影到 2D (前端計算) ===
+      // 實作完整相機模型 (含畸變)：
+      function project3DPoint(
+        extrinsic, // 3x4
+        cameraK, // 3x3
+        distCoeffs, // [k1,k2,p1,p2,k3]
+        X,
+        Y,
+        Z
+      ) {
+        // 1. 世界座標 -> 鏡頭座標
+        //    [Xc, Yc, Zc] = [R|t] * [X, Y, Z, 1]
+        let Xc =
+          extrinsic[0][0] * X +
+          extrinsic[0][1] * Y +
+          extrinsic[0][2] * Z +
+          extrinsic[0][3];
+        let Yc =
+          extrinsic[1][0] * X +
+          extrinsic[1][1] * Y +
+          extrinsic[1][2] * Z +
+          extrinsic[1][3];
+        let Zc =
+          extrinsic[2][0] * X +
+          extrinsic[2][1] * Y +
+          extrinsic[2][2] * Z +
+          extrinsic[2][3];
+
+        // 2. 鏡頭座標 -> 歸一化平面 (x', y') = (Xc / Zc, Yc / Zc)
+        let x_ = Xc / Zc;
+        let y_ = Yc / Zc;
+
+        // 3. 計算畸變 (radial + tangential)
+        //    r^2 = x'^2 + y'^2
+        let r2 = x_ * x_ + y_ * y_;
+        let k1 = distCoeffs[0],
+          k2 = distCoeffs[1],
+          p1 = distCoeffs[2],
+          p2 = distCoeffs[3],
+          k3 = distCoeffs[4];
+
+        let radial = 1 + k1 * r2 + k2 * Math.pow(r2, 2) + k3 * Math.pow(r2, 3);
+        // x'' = x' * radial + 2p1 x'y' + p2(r^2 + 2x'^2)
+        // y'' = y' * radial + 2p2 x'y' + p1(r^2 + 2y'^2)
+        let x__ = x_ * radial + 2 * p1 * x_ * y_ + p2 * (r2 + 2 * x_ * x_);
+        let y__ = y_ * radial + 2 * p2 * x_ * y_ + p1 * (r2 + 2 * y_ * y_);
+
+        // 4. 投影到像素 (u,v) = (fx*x'' + cx, fy*y'' + cy)
+        let fx = cameraK[0][0],
+          fy = cameraK[1][1],
+          cx = cameraK[0][2],
+          cy = cameraK[1][2];
+
+        let u = fx * x__ + cx;
+        let v = fy * y__ + cy;
+        return [u, v];
+      }
+
+      function drawSpecialPoints(
+        extrinsic, // 3x4
+        cameraK, // 3x3
+        distCoeffs // [k1, k2, p1, p2, k3]
+      ) {
+        // 先清除一下舊標記
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 重新繪製已標記的紅點
+        imagePoints.forEach((point) => {
+          ctx.fillStyle = "red";
+          ctx.beginPath();
+          ctx.arc(point[0], point[1], 5, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+
+        for (let sp of specialPoints) {
+          let [u, v] = project3DPoint(
+            extrinsic,
+            cameraK,
+            distCoeffs,
+            sp.coords[0],
+            sp.coords[1],
+            sp.coords[2]
+          );
+          // 在 Canvas 上畫藍色圈
+          ctx.fillStyle = "blue";
+          ctx.beginPath();
+          ctx.arc(u, v, 5, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // 寫上標籤
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "blue";
+          ctx.fillText(sp.name, u + 8, v);
+        }
+      }
+
+      /**
+       * 將外參矩陣轉換為 HTML 表格並顯示
+       * @param {Array} matrix - 3x4 的外參矩陣
+       */
+      function displayExtrinsicMatrix(matrix) {
+        // 創建表格的 HTML 字串
+        let tableHTML = `
+        <table class="table table-bordered table-striped matrix-table">
+          <thead class="table-light">
+            <tr>
+              <th colspan="4" class="text-center">外參矩陣 [R|t]</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+        matrix.forEach((row) => {
+          tableHTML += `<tr>`;
+          row.forEach((cell) => {
+            tableHTML += `<td>${cell.toFixed(6)}</td>`;
+          });
+          tableHTML += `</tr>`;
+        });
+
+        tableHTML += `
+          </tbody>
+        </table>
+      `;
+
+        // 插入到結果顯示區域
+        resultArea.innerHTML = tableHTML;
+      }
+
+      // === E. 按下「計算外參 (後端)」===
+      document
+        .getElementById("solveExtrinsicBtn")
+        .addEventListener("click", async () => {
+          // (1) 取得相機內參
+          let fx = parseFloat(document.getElementById("fx").value);
+          let fy = parseFloat(document.getElementById("fy").value);
+          let cx = parseFloat(document.getElementById("cx").value);
+          let cy = parseFloat(document.getElementById("cy").value);
+
+          // (2) 畸變係數
+          let k1 = parseFloat(document.getElementById("k1").value);
+          let k2 = parseFloat(document.getElementById("k2").value);
+          let p1 = parseFloat(document.getElementById("p1").value);
+          let p2 = parseFloat(document.getElementById("p2").value);
+          let k3 = parseFloat(document.getElementById("k3").value);
+
+          // (3) cameraKs 與 distCoeffs
+          let cameraKs = [
+            [fx, 0, cx],
+            [0, fy, cy],
+            [0, 0, 1],
+          ];
+          let dist = [k1, k2, p1, p2, k3];
+
+          // (4) fetch 後端 API
+          try {
+            let response = await fetch("/api/extrinsic", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                camera_ks: cameraKs,
+                dist: dist,
+                court3D: objectPoints,
+                court2D: imagePoints,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                "API request failed, status = " + response.status
+              );
+            }
+
+            let extrinsic = await response.json(); // 回傳 3x4 matrix
+            // extrinsic = [
+            //   [r11, r12, r13, tx],
+            //   [r21, r22, r23, ty],
+            //   [r31, r32, r33, tz]
+            // ]
+
+            // (5) 顯示外參
+            displayExtrinsicMatrix(extrinsic);
+
+            // (6) 根據外參 在 Canvas 上標記「原點、四個角」
+            drawSpecialPoints(extrinsic, cameraKs, dist);
+          } catch (err) {
+            console.error(err);
+            resultArea.innerHTML = `<div class="alert alert-danger" role="alert">Error: ${err.message}</div>`;
+          }
+        });
+    </script>
+  </body>
+</html>

@@ -37,7 +37,6 @@ def interpolate_trajectory(points, method="linear"):
         if missing[i] == True:
             missing[i] = False
         else:
-            missing[i] = False
             for j in range(0, i):
                 points[j] = points[i]
             break
