@@ -32,6 +32,14 @@ def interpolate_trajectory(points, method="linear"):
     """
     # Identify missing points
     missing = np.all(points == 0, axis=1)
+    # Do not interpolate missing values at the beginning
+    for i in range(len(missing)):
+        if missing[i] == True:
+            missing[i] = False
+        else:
+            for j in range(0, i):
+                points[j] = points[i]
+            break
     valid = ~missing
     
     valid_indices = np.where(valid)[0]
@@ -111,6 +119,12 @@ def update(frame):
     
     # Update scatter plot sizes to make the trail width gradually get smaller
     sizes = 10 ** np.linspace(0, 2, len(trail_indices))
+
+    # if (x,y,z) == (0,0,0), set size to 0
+    for i in range(len(trail_indices)):
+        if np.all(trace[trail_indices[i]] == 0):
+            sizes[i] = 0
+
     scatter.set_sizes(sizes)
     
     ax1.title.set_text(f'Frame: {frame}, Vel: {np.linalg.norm(velocity[frame]*FPS):6.3f}, Acc: {np.linalg.norm(acceleration[frame]*FPS**2):6.3f}')
@@ -120,7 +134,7 @@ def save_animation_to_video(animation, filename):
     with tqdm(total=animation._save_count, desc="Saving video") as pbar:
         animation.save(filename, writer=writer, progress_callback=lambda i, n: pbar.update(1))
 
-start_frame = 310
+start_frame = 0
 end_frame = trace.shape[0]
 ani = FuncAnimation(fig, update, frames=range(start_frame, end_frame), repeat=False, interval=interval)
 
