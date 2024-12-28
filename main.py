@@ -22,7 +22,7 @@ def loadConfig(cfg_file):
         sys.exit()
     return config
 
-def triangluation(data_folder, output_dir):
+def triangluation(data_folder, output_csv):
     ks = []
     poses = []     
     eye = []
@@ -155,7 +155,6 @@ def triangluation(data_folder, output_dir):
         for index in sorted(idx_pop_all_points_2d, reverse=True):
             del all_points_2d[index]
 
-    output_csv = os.path.join(output_dir, 'Model3D.csv')
     save_points_to_csv(points=output_points, csv_file=output_csv)
     print(f'Output: {output_csv}')
 
@@ -164,7 +163,7 @@ def triangluation(data_folder, output_dir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Triangulate 3D points from 2D data.")
     parser.add_argument('--data_folder', required=True, help="Path to the data folder.")
-    parser.add_argument('--output_dir', default='output', help="Path to the output directory.")
+    parser.add_argument('--output_csv', default='output/Model3D.csv', help="Path to the output directory.")
     args = parser.parse_args()
 
-    triangluation(data_folder=args.data_folder, output_dir=args.output_dir)
+    triangluation(data_folder=args.data_folder, output_csv=args.output_csv)

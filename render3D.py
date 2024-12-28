@@ -12,10 +12,10 @@ import matplotlib.animation as animation_module
 # Argument parser to choose CSV file and output directory
 parser = argparse.ArgumentParser(description="3D Trajectory Visualization")
 parser.add_argument("--csv", type=str, required=True, help="Path to the input CSV file")
-parser.add_argument("--output_dir", type=str, default="output/", help="Directory to save the output video")
+parser.add_argument("--output_vid", type=str, default="output/3D_trajectory.mp4", help="Directory to save the output video")
 args = parser.parse_args()
 
-output_dir = args.output_dir
+output_vid = args.output_vid
 trace = load_points_from_csv(args.csv)
 trace = np.stack([x.toXYZ() for x in trace], axis=0)
 print(trace.shape)
@@ -261,5 +261,4 @@ end_frame = trace.shape[0]
 ani = FuncAnimation(fig, update, frames=range(start_frame, end_frame), repeat=False, interval=interval)
 
 # Save the animation to a video file
-timestamp = strftime('%Y_%m%d_%H%M')
-save_animation_to_video(ani, os.path.join(output_dir, f'3D_trajectory.mp4'))
+save_animation_to_video(ani, output_vid)
