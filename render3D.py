@@ -40,6 +40,15 @@ def interpolate_trajectory(points, method="linear"):
             for j in range(0, i):
                 points[j] = points[i]
             break
+    # Do the same for the end
+    for i in range(len(missing) - 1, -1, -1):
+        if missing[i] == True:
+            missing[i] = False
+        else:
+            for j in range(len(missing) - 1, i, -1):
+                points[j] = points[i]
+            break
+    
     valid = ~missing
     
     valid_indices = np.where(valid)[0]
