@@ -102,7 +102,7 @@
     <!-- 主容器 -->
     <div class="container my-5">
       <h1 class="text-center mb-4">
-        Generate Badminton 3D Trajectory Simulation 羽球3D軌跡模擬
+        Badminton 3D Trajectory Simulation 羽球3D軌跡模擬
       </h1>
 
       <!-- 上傳表單區塊 -->
@@ -113,7 +113,9 @@
         <div class="card-body">
           <form id="uploadForm">
             <div class="mb-3">
-              <label for="folderInput" class="form-label">Select Folder 選擇資料夾</label>
+              <label for="folderInput" class="form-label"
+                >Select Folder 選擇資料夾</label
+              >
               <input
                 id="folderInput"
                 type="file"
@@ -133,7 +135,6 @@
           </form>
         </div>
       </div>
-
 
       <!-- 影片預覽區塊 -->
       <div class="card mb-4">
@@ -256,7 +257,6 @@
           videoContainer.appendChild(row);
         }
       });
-
 
       // 當提交表單時，上傳並處理資料夾 / On form submission, upload and process the folder
       uploadForm.addEventListener("submit", async (event) => {
