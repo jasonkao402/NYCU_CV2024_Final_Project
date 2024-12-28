@@ -2,7 +2,7 @@ import os
 import subprocess
 from flask import Flask, request, render_template, send_from_directory, url_for, jsonify
 import numpy as np
-from Hfinder import Hfinder
+from CameraMatrixFinder import CameraMatrixFinder
 
 app = Flask(__name__)
 UPLOAD_FOLDER = './uploads'
@@ -23,11 +23,10 @@ def calculate_extrinsic():
     # Load from request body json
     camera_ks = np.array(request.json['camera_ks'], np.float32)
     dist = np.array(request.json['dist'], np.float32)
-    # nmtx = np.array(request.json['nmtx'], np.float32)
     court3D = np.array(request.json['court3D'], np.float32)
     court2D = np.array(request.json['court2D'], np.float32)
 
-    hfinder = Hfinder(camera_ks, dist, camera_ks, court3D, court2D)
+    hfinder = CameraMatrixFinder(camera_ks, dist, court3D, court2D)
     return jsonify(hfinder.getExtrinsic_mat().tolist())
 
 @app.route('/upload', methods=['POST'])
