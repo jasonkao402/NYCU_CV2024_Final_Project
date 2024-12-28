@@ -34,7 +34,7 @@ def interpolate_trajectory(points, method="linear"):
     missing = np.all(points == 0, axis=1)
     # Do not interpolate missing values at the beginning
     for i in range(len(missing)):
-        if missing[i] == True:
+        if missing[i]:
             missing[i] = False
         else:
             for j in range(0, i):
@@ -42,7 +42,7 @@ def interpolate_trajectory(points, method="linear"):
             break
     # Do the same for the end
     for i in range(len(missing) - 1, -1, -1):
-        if missing[i] == True:
+        if missing[i]:
             missing[i] = False
         else:
             for j in range(len(missing) - 1, i, -1):
@@ -50,9 +50,9 @@ def interpolate_trajectory(points, method="linear"):
             break
     
     valid = ~missing
-    
+
     valid_indices = np.where(valid)[0]
-    
+
     # Create interpolation function
     if method == "linear":
         f = interp1d(valid_indices, points[valid], axis=0, kind="linear", fill_value="extrapolate")
@@ -70,116 +70,73 @@ def moving_average(data, window_size=5):
 
 def draw_court_lines(ax):
     """
-    在 z=0 平面上，繪製整個「雙打」羽球場的所有主要標線 + 立面網子(網高約 1.55 m)。
-    
-    假設座標原點在球場正中央，所以：
-      - x 軸範圍為 -3.05 ~ 3.05 (球場寬 6.10 m)
-      - y 軸範圍為 -6.7 ~ 6.7 (球場長 13.4 m)
-      - z=0 為地面。
-      - 網子在 y=0，高度約 1.55 m。
+    繪製雙打球場主要標線、網子以及柱子。
     """
-
-    #---------------------------------------------
-    # 幫助避免線條被 surface 或 pane 遮住：
-    # 可以將線條稍微提升一點 z=0.001，
-    # 以免與地板 (z=0) 在 3D 場景發生 z-fighting。
-    #---------------------------------------------
     offset_z = 0
 
-    #---------------------------------------------
-    # 1. 外框 (雙打邊界)
-    #   x = ±3.05, y = ±6.7
-    #---------------------------------------------
+    # 外框 (雙打)
     outer_x = [-3.05,  3.05,  3.05, -3.05, -3.05]
     outer_y = [-6.70, -6.70,  6.70,  6.70, -6.70]
     outer_z = [offset_z]*5
     ax.plot(outer_x, outer_y, outer_z, color='white', linewidth=2)
 
-    #---------------------------------------------
-    # 2. 單打邊線
-    #   x = ±(半場寬度 2.53), y = ±6.7
-    #   若需要顯示單打場地，可以補上這些線
-    #---------------------------------------------
+    # 單打邊線
     single_x = [-2.53,  2.53,  2.53, -2.53, -2.53]
     single_y = [-6.70, -6.70,  6.70,  6.70, -6.70]
     single_z = [offset_z]*5
     ax.plot(single_x, single_y, single_z, color='white', linewidth=1.5)
 
-    #---------------------------------------------
-    # 3. 短發球線 (Short Service Line)
-    #   與網子距離約 1.98 m -> y= ±1.98
-    #---------------------------------------------
+    # 短發球線 (±1.98)
     short_service_line_x = [-3.05, 3.05]
     short_service_line_y1 = [1.98, 1.98]
     short_service_line_y2 = [-1.98, -1.98]
     short_service_line_z  = [offset_z, offset_z]
-
     ax.plot(short_service_line_x, short_service_line_y1, short_service_line_z,
             color='white', linewidth=2)
     ax.plot(short_service_line_x, short_service_line_y2, short_service_line_z,
             color='white', linewidth=2)
 
-    #---------------------------------------------
-    # 4. 雙打長發球線 (Doubles Long Service Line)
-    #   距離底線約 0.76 m => y= ±(6.70 - 0.76) = ±5.94
-    #---------------------------------------------
+    # 雙打長發球線 (±5.94)
     doubles_long_service_line_x = [-3.05, 3.05]
     doubles_long_service_line_y1 = [5.94, 5.94]
     doubles_long_service_line_y2 = [-5.94, -5.94]
     doubles_long_service_line_z  = [offset_z, offset_z]
-
     ax.plot(doubles_long_service_line_x, doubles_long_service_line_y1, doubles_long_service_line_z,
             color='white', linewidth=2)
     ax.plot(doubles_long_service_line_x, doubles_long_service_line_y2, doubles_long_service_line_z,
             color='white', linewidth=2)
 
-    #---------------------------------------------
-    # 5. 中心線 (Center Line)
-    #   分隔左右發球區，從短發球線 y=±1.98 畫到底線 y=±6.7
-    #   這樣各發球區被分成左右半場。
-    #---------------------------------------------
-    # 上半場
+    # 中心線 (±1.98 到 ±6.7)
     center_line_x = [0, 0]
-    center_line_y_upper = [1.98, 6.7]   # y=1.98到6.7
-    center_line_y_lower = [-1.98, -6.7] # y=-1.98到-6.7
-    center_line_z = [offset_z, offset_z]
-
-    ax.plot(center_line_x, center_line_y_upper, center_line_z,
+    ax.plot(center_line_x, [1.98, 6.7], [offset_z, offset_z],
             color='white', linewidth=2)
-    ax.plot(center_line_x, center_line_y_lower, center_line_z,
+    ax.plot(center_line_x, [-1.98, -6.7], [offset_z, offset_z],
             color='white', linewidth=2)
 
-    #---------------------------------------------
-    # 6. 網子 (以一個面表示)
-    #   在 y=0，網高約 1.55 m
-    #---------------------------------------------
+    # 網子 (y=0, 高度~1.55)
     net_height = 1.55
-    x_net = np.linspace(-3.05, 3.05, 2)   # 網子與雙打場寬相同
+    x_net = np.linspace(-3.05, 3.05, 2)
     z_net = np.linspace(0.79, net_height, 2)
     X_net, Z_net = np.meshgrid(x_net, z_net)
-    Y_net = np.zeros_like(X_net)  # 全為 y=0
-    # 以半透明黑色表示網子
+    Y_net = np.zeros_like(X_net)  
     ax.plot_surface(X_net, Y_net, Z_net, color='black', alpha=0.5)
 
-    # 7. 兩根柱子 (Poles)  
-    #    假設在 x=±3.05, y=0, 高度 ~1.55 m
+    # 兩根柱子
     pole_left_x = [-3.05, -3.05]
     pole_left_y = [0, 0]
     pole_left_z = [0, net_height]
-    ax.plot(pole_left_x, pole_left_y, pole_left_z,
-            color='black', linewidth=2)
+    ax.plot(pole_left_x, pole_left_y, pole_left_z, color='black', linewidth=2)
 
     pole_right_x = [3.05, 3.05]
     pole_right_y = [0, 0]
     pole_right_z = [0, net_height]
-    ax.plot(pole_right_x, pole_right_y, pole_right_z,
-            color='black', linewidth=2)
+    ax.plot(pole_right_x, pole_right_y, pole_right_z, color='black', linewidth=2)
 
-
+# -- 前處理 --
 trace = interpolate_trajectory(trace, method="linear")
 for i in range(3):
     trace[:, i] = moving_average(trace[:, i], window_size=9)
-    
+
 # Calculate velocity and acceleration
 velocity = np.diff(trace, axis=0, prepend=np.zeros((1, 3)))
 acceleration = np.diff(velocity, axis=0, prepend=np.zeros((1, 3)))
@@ -196,6 +153,7 @@ ax1.set_zlim3d(0, 6)
 ax1.zaxis.set_pane_color((0.098, 0.537, 0.392, 1.0))
 ax1.set_box_aspect([6.4, 13.8, 6])
 draw_court_lines(ax1)
+
 axis_min = np.min(trace, axis=0)
 axis_max = np.max(trace, axis=0)
 print(axis_min, axis_max, sep='\n')
@@ -210,10 +168,14 @@ def best_fit_plane(points):
     normal = vh[2, :]
     return centroid, normal
 
+# 新增：判斷誰得分的變數 + 閾值
+landing_threshold = 0.05
+winner = None
 last_normal = None
 
 def update(frame):
-    global last_normal
+    global last_normal, winner
+
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
     ax1.set_zlabel('Z')
@@ -221,33 +183,73 @@ def update(frame):
     # Calculate the best fit plane for the current frame
     current_points = trace[max(0, frame - 7):frame + 7, :3]
     _, normal = best_fit_plane(current_points)
-    
-    # Interpolate the normal to reduce spazzing camera movement
     normal = normal if last_normal is None else normal if np.dot(normal, last_normal) > 0 else -normal
     if last_normal is not None:
         normal = 0.99 * last_normal + 0.01 * normal
     last_normal = normal
-    
-    # Set the view to the best fit plane's normal
     ax1.view_init(elev=10, azim=np.degrees(np.arctan2(normal[1], normal[0])))
-    
+
     # Update scatter plot
     trail_indices = range(max(0, frame - TRAIL), frame + 1)
-    scatter._offsets3d = (trace[trail_indices, 0], 
-                          trace[trail_indices, 1], 
-                          trace[trail_indices, 2])
+    scatter._offsets3d = (
+        trace[trail_indices, 0], 
+        trace[trail_indices, 1], 
+        trace[trail_indices, 2]
+    )
     
     # Update scatter plot sizes to make the trail width gradually get smaller
     sizes = 10 ** np.linspace(0, 2, len(trail_indices))
-
-    # if (x,y,z) == (0,0,0), set size to 0
     for i in range(len(trail_indices)):
         if np.all(trace[trail_indices[i]] == 0):
             sizes[i] = 0
-
     scatter.set_sizes(sizes)
+
+    # 取得當前球位置
+    x, y, z = trace[frame]
+
+    # ---------------------------------------------------
+    # 新增: 出界 & 落地 的簡易判斷 (只會發生一次)
+    # ---------------------------------------------------
+    if winner is None:
+        # 1) 檢查是否 "出界"
+        #    球超過外框 => (abs(x) > 3.05) or (abs(y) > 6.7)
+        if (abs(x) > 3.05 or abs(y) > 6.7) and z < landing_threshold:
+            # 如果 y>0 => 出界在 B方 => A得分
+            # 如果 y<0 => 出界在 A方 => B得分
+            if y > 0:
+                winner = "A gets the point (out-of-bound by B)"
+            else:
+                winner = "B gets the point (out-of-bound by A)"
+
+        # 2) 若沒出界，再檢查是否落地 (z < threshold)
+        elif z < landing_threshold:
+            # y>0 => B方半場 => A得分
+            # y<0 => A方半場 => B得分
+            if y > 0:
+                winner = "A gets the point (landed in B-court)"
+            else:
+                winner = "B gets the point (landed in A-court)"
+
+    # 顯示在標題
+    current_vel = np.linalg.norm(velocity[frame] * FPS)
+    current_acc = np.linalg.norm(acceleration[frame] * FPS**2)
     
-    ax1.title.set_text(f'Frame: {frame}, Vel: {np.linalg.norm(velocity[frame]*FPS):6.3f}, Acc: {np.linalg.norm(acceleration[frame]*FPS**2):6.3f}')
+    if winner is None:
+        title_text = (
+            f"Frame: {frame}, "
+            f"Vel: {current_vel:6.3f}, "
+            f"Acc: {current_acc:6.3f}, "
+            "No winner yet"
+        )
+    else:
+        title_text = (
+            f"Frame: {frame}, "
+            f"Vel: {current_vel:6.3f}, "
+            f"Acc: {current_acc:6.3f}, "
+            f"Result: {winner}"
+        )
+
+    ax1.title.set_text(title_text)
 
 def save_animation_to_video(animation, filename):
     writer = animation_module.writers['ffmpeg'](fps=FPS, extra_args=['-vcodec', 'libx264'])
