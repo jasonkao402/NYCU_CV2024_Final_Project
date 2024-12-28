@@ -48,7 +48,7 @@ def upload():
     # 執行 main.py
     try:
         main_result = subprocess.run(
-            ['python3.8', 'main.py', '--data_folder', UPLOAD_FOLDER, '--output_dir', PROCESSED_FOLDER],
+            ['python', 'main.py', '--data_folder', UPLOAD_FOLDER, '--output_dir', PROCESSED_FOLDER],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -65,7 +65,7 @@ def upload():
     try:
         csv_path = os.path.join(PROCESSED_FOLDER, 'Model3D.csv')
         second_result = subprocess.run(
-            ['python3.8', 'render3D.py', '--csv', csv_path, '--output_dir', PROCESSED_FOLDER],
+            ['python', 'render3D.py', '--csv', csv_path, '--output_dir', PROCESSED_FOLDER],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True

@@ -26,7 +26,7 @@ def loadConfig(cfg_file):
         sys.exit()
     return config
 
-def triangluation(data_folder, camera_config_folder, output_dir):
+def triangluation(data_folder, output_dir):
     ks = []
     poses = []          # Only Used by Shao-Ping Method
     eye = []            # Only Used by Shao-Ping Method
@@ -43,7 +43,7 @@ def triangluation(data_folder, camera_config_folder, output_dir):
         mp4 = c + '.mp4'
         points_2d = load_points_from_csv(os.path.join(data_folder, mp4.split('.')[0] + '.csv'))
 
-        camera_config_path = os.path.join(camera_config_folder, c + '.cfg')
+        camera_config_path = os.path.join(data_folder, c + '.cfg')
         camera_config = loadConfig(camera_config_path)
 
         fps = min(fps, float(camera_config['Camera']['fps']))
@@ -170,4 +170,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     cameras = ['CameraReader_1', 'CameraReader_2']
-    triangluation(data_folder=args.data_folder, camera_config_folder=args.camera_config_folder, output_dir=args.output_dir)
+    triangluation(data_folder=args.data_folder, output_dir=args.output_dir)
