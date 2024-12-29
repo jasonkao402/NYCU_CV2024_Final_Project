@@ -48,18 +48,18 @@ def upload():
     try:
         output_csv = os.path.join(PROCESSED_FOLDER, 'Model3D.csv')
         main_result = subprocess.run(
-            ['python', 'main.py', '--data_folder', UPLOAD_FOLDER, '--output_csv', output_csv],
+            ['python', 'reconstruct3D.py', '--data_folder', UPLOAD_FOLDER, '--output_csv', output_csv],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
         if main_result.returncode != 0:
-            return f'Error in main.py:\n{main_result.stderr}', 500
+            return f'Error in reconstruct3D.py:\n{main_result.stderr}', 500
         print(main_result.stdout)
 
     except Exception as e:
         print(e.with_traceback())
-        return f'Failed to execute main.py: {e}', 500
+        return f'Failed to execute reconstruct3D.py: {e}', 500
 
     # 執行 render3D.py
     try:
