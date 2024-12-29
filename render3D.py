@@ -18,6 +18,8 @@ args = parser.parse_args()
 output_vid = args.output_vid
 trace = load_points_from_csv(args.csv)
 trace = np.stack([x.toXYZ() for x in trace], axis=0)
+start_frame = 0
+end_frame = trace.shape[0]
 print(trace.shape)
 # (1438, 3)
 
@@ -135,7 +137,7 @@ def draw_court_lines(ax):
 # -- 前處理 --
 trace = interpolate_trajectory(trace, method="linear")
 for i in range(3):
-    trace[:, i] = moving_average(trace[:, i], window_size=9)
+    trace[:, i] = moving_average(trace[:, i], window_size=5)
 
 # Calculate velocity and acceleration
 velocity = np.diff(trace, axis=0, prepend=np.zeros((1, 3)))
@@ -154,40 +156,42 @@ ax1.zaxis.set_pane_color((0.098, 0.537, 0.392, 1.0))
 ax1.set_box_aspect([6.4, 13.8, 6])
 draw_court_lines(ax1)
 
-axis_min = np.min(trace, axis=0)
-axis_max = np.max(trace, axis=0)
-print(axis_min, axis_max, sep='\n')
+# axis_min = np.min(trace, axis=0)
+# axis_max = np.max(trace, axis=0)
+# print(axis_min, axis_max, sep='\n')
 
 # Initialize scatter plot and quiver objects
 scatter = ax1.scatter([], [], [], c='r')
 
-def best_fit_plane(points):
-    centroid = np.mean(points, axis=0)
-    centered_points = points - centroid
-    _, _, vh = np.linalg.svd(centered_points)
-    normal = vh[2, :]
-    return centroid, normal
+# def best_fit_plane(points):
+#     centroid = np.mean(points, axis=0)
+#     centered_points = points - centroid
+#     _, _, vh = np.linalg.svd(centered_points)
+#     normal = vh[2, :]
+#     return centroid, normal
 
 # 新增：判斷誰得分的變數 + 閾值
 landing_threshold = 0.05
 winner = None
-last_normal = None
+dest_angle = 0
+curr_angle = 0
 
 def update(frame):
-    global last_normal, winner
+    global dest_angle, curr_angle, winner
 
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
     ax1.set_zlabel('Z')
     
-    # Calculate the best fit plane for the current frame
-    current_points = trace[max(0, frame - 7):frame + 7, :3]
-    _, normal = best_fit_plane(current_points)
-    normal = normal if last_normal is None else normal if np.dot(normal, last_normal) > 0 else -normal
-    if last_normal is not None:
-        normal = 0.99 * last_normal + 0.01 * normal
-    last_normal = normal
-    ax1.view_init(elev=10, azim=np.degrees(np.arctan2(normal[1], normal[0])))
+    # Calculate the destination angle based on the ball's position to the judge's position
+    judge_pos = np.array([20, 0, 0])
+    x, y, z = trace[frame] - judge_pos
+    dest_angle = np.degrees(np.arctan2(y, x))
+    dest_angle = np.clip(dest_angle, -15, 15)
+    
+    curr_angle = 0.97 * curr_angle + 0.03 * dest_angle
+    
+    ax1.view_init(elev=10, azim=curr_angle)
 
     # Update scatter plot
     trail_indices = range(max(0, frame - TRAIL), frame + 1)
@@ -236,29 +240,54 @@ def update(frame):
     
     if winner is None:
         title_text = (
-            f"Frame: {frame}, "
-            f"Vel: {current_vel:6.3f}, "
-            f"Acc: {current_acc:6.3f}, "
+            f"Frame: {frame:4d}, "
+            f"Vel: {current_vel:7.3f}, "
+            f"Acc: {current_acc:7.3f}, "
             "No winner yet"
         )
     else:
         title_text = (
-            f"Frame: {frame}, "
-            f"Vel: {current_vel:6.3f}, "
-            f"Acc: {current_acc:6.3f}, "
+            f"Frame: {frame:4d}, "
+            f"Vel: {current_vel:7.3f}, "
+            f"Acc: {current_acc:7.3f}, "
             f"Result: {winner}"
         )
 
     ax1.title.set_text(title_text)
 
+def save_top_down_image(ax, trace, frame, filename):
+    """
+    Save a top-down image of the court and ball position at the given frame.
+    """
+    ax.view_init(elev=90, azim=0)  # Top-down view
+    ball_x, ball_y, ball_z = trace[frame]
+    
+    # Set limits to zoom in on the ball
+    zoom_margin = 3.0
+    ax.set_box_aspect([2*zoom_margin, 2*zoom_margin, 6])
+    ax.set_xlim3d(ball_x - zoom_margin, ball_x + zoom_margin)
+    ax.set_ylim3d(ball_y - zoom_margin, ball_y + zoom_margin)
+    ax.set_zlim3d(0, 3)
+    
+    # Update scatter plot for the specific frame
+    scatter._offsets3d = (
+        trace[frame:frame+1, 0], 
+        trace[frame:frame+1, 1], 
+        trace[frame:frame+1, 2]
+    )
+    scatter.set_sizes([100])  # Set the point size larger
+    plt.savefig(filename)
+    print(f"Top-down image saved to {filename}")
+
 def save_animation_to_video(animation, filename):
     writer = animation_module.writers['ffmpeg'](fps=FPS, extra_args=['-vcodec', 'libx264'])
     with tqdm(total=animation._save_count, desc="Saving video") as pbar:
         animation.save(filename, writer=writer, progress_callback=lambda i, n: pbar.update(1))
+    
+    # Save the top-down image at the end of the animation
+    save_top_down_image(ax1, trace, end_frame - 1, filename.replace('.mp4', '_top_down.png'))
 
-start_frame = 0
-end_frame = trace.shape[0]
-ani = FuncAnimation(fig, update, frames=range(start_frame, end_frame), repeat=False, interval=interval)
+ani = FuncAnimation(fig, update, frames=range(end_frame), repeat=False, interval=interval)
 
 # Save the animation to a video file
 save_animation_to_video(ani, output_vid)
